@@ -24,7 +24,6 @@
             width: 100%; height: 100%; background-color: var(--bg-color);
             color: var(--text-color); font-family: var(--font-main);
             overflow: hidden; display: flex; justify-content: center; align-items: center;
-            perspective: 1000px;
         }
 
         #app-container {
@@ -58,17 +57,16 @@
             box-shadow: 0 0 10px rgba(0, 255, 204, 0.3) inset; letter-spacing: 2px;
         }
         .btn-retro:hover { background: var(--accent-color); color: #000; box-shadow: 0 0 20px var(--accent-color); transform: translateY(-2px); }
-        .btn-retro:active { transform: translateY(2px); }
-
+        
         .loader-box { width: 80%; max-width: 400px; padding: 20px; border: 1px solid #333; background: rgba(0,0,0,0.5); text-align: left; font-family: var(--font-code); }
         .loader-bar-bg { width: 100%; height: 20px; background: #111; margin-top: 10px; border: 1px solid var(--accent-color); }
         #loader-bar { height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s; }
 
-        .game-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 900px; margin-top: 30px; }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; width: 100%; max-width: 900px; margin-top: 30px; }
         .game-card {
             background: rgba(20, 20, 35, 0.8); border: 2px solid #333; padding: 25px;
             text-align: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border-radius: 12px; width: 260px; display: flex; flex-direction: column; justify-content: space-between;
+            border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;
         }
         .game-card:hover { border-color: var(--accent-color); transform: translateY(-10px); box-shadow: 0 10px 20px rgba(0,255,204,0.1); background: rgba(30,30,50,0.9); }
         .game-card.completed { border-color: #00ff00; opacity: 0.7; }
@@ -101,7 +99,7 @@
         .memory-card.matched .back { border-color: #00ff00; box-shadow: 0 0 20px #00ff00; filter: grayscale(0.2); }
 
         #final-sequence-container { background: #000; z-index: 100; justify-content: center; align-items: center; }
-        #final-message-area { font-family: var(--font-code); font-size: 1.5rem; color: #0f0; text-align: left; max-width: 800px; padding: 40px; min-height: 150px; text-shadow: 0 0 5px #0f0; line-height: 1.5; }
+        #final-message-area { font-family: var(--font-code); font-size: 1.5rem; color: #0f0; text-align: center; max-width: 800px; padding: 40px; min-height: 150px; text-shadow: 0 0 5px #0f0; line-height: 1.5; }
         .cursor-blink { animation: blink 1s step-end infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
@@ -117,8 +115,8 @@
 
     <div id="screen-loading" class="layer">
         <div class="loader-box">
-            <div style="margin-bottom: 10px;">> INICIALIZANDO SISTEMA UNDAIAS...</div>
-            <div id="loader-text" style="color: #888; font-size: 0.9rem;">Carregando pacotes npm e fotos comprometedoras...</div>
+            <div style="margin-bottom: 10px;">> INICIALIZANDO SISTEMA...</div>
+            <div id="loader-text" style="color: #888; font-size: 0.9rem;">Carregando pacotes e fotos...</div>
             <div class="loader-bar-bg"><div id="loader-bar"></div></div>
         </div>
     </div>
@@ -135,7 +133,7 @@
             <div class="game-card" id="card-memory" onclick="App.startGame('memory')">
                 <div class="game-icon">🧠📸</div>
                 <h3>Memória RAM</h3>
-                <p style="font-size: 0.9rem; color: #aaa;">Ache os pares das nossas fotos zoadas (16 cartas).</p>
+                <p style="font-size: 0.9rem; color: #aaa;">Ache os pares das nossas fotos (16 cartas).</p>
             </div>
             <div class="game-card" id="card-clicker" onclick="App.startGame('clicker')">
                 <div class="game-icon">🖱️⚡</div>
@@ -147,7 +145,7 @@
 
     <div id="screen-dodger" class="game-container hidden">
         <div class="game-header">
-            <div>Bugs Evitados: <span id="ui-dodger-score" style="color:var(--accent-color)">0</span> / 15</div>
+            <div>Deploys Concluídos: <span id="ui-dodger-score" style="color:var(--accent-color)">0</span> / 15</div>
             <button class="btn-retro" style="padding: 5px 15px; margin: 0; font-size: 0.8rem;" onclick="App.returnToMenu()">Sair</button>
         </div>
         <div class="game-canvas-area"><canvas id="canvas-dodger"></canvas></div>
@@ -192,20 +190,19 @@ const CONFIG = {
     colors: { gold: '#FFD700', cyan: '#00ffcc', red: '#ff0055', bg: '#0d0d1a' }
 };
 
-// Aqui estão os nomes exatos do seu Windows Explorer.
-// Para a Web, é ALTAMENTE RECOMENDADO renomear as fotos para nomes simples sem espaços.
-// Ex: foto1.jpeg, foto2.jpeg. Mas este código usa os originais.
+// Mapeamento EXATO dos arquivos do Windows.
+// Usamos encodeURIComponent para proteger os espaços nas URLs durante as requisições.
 const rawImages = {
-    stadiumSelfie: "WhatsApp Image 2026-05-14 at 09.19.46.jpeg",
-    closeSelfie: "WhatsApp Image 2026-05-14 at 09.19.46 (1).jpeg",
-    backpackThumb: "WhatsApp Image 2026-05-14 at 09.19.46 (2).jpeg",
-    shirtlessSmile: "WhatsApp Image 2026-05-14 at 09.19.47.jpeg",
-    bathroomThumbsUp: "WhatsApp Image 2026-05-14 at 09.19.47 (1).jpeg",
-    selfieMirror: "WhatsApp Image 2026-05-14 at 09.19.47 (2).jpeg",
-    sleepy1: "WhatsApp Image 2026-05-14 at 09.21.01.jpeg",
-    flexing: "WhatsApp Image 2026-05-14 at 09.21.02 (1).jpeg",
-    sleepy2: "WhatsApp Image 2026-05-14 at 09.21.02 (2).jpeg",
-    sleepy3: "WhatsApp Image 2026-05-14 at 09.21.02.jpeg"
+    stadiumSelfie: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.19.46.jpeg"),
+    closeSelfie: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.19.46 (1).jpeg"),
+    backpackThumb: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.19.46 (2).jpeg"),
+    shirtlessSmile: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.19.47.jpeg"),
+    bathroomThumbsUp: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.19.47 (1).jpeg"),
+    selfieMirror: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.19.47 (2).jpeg"),
+    sleepy1: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.21.01.jpeg"),
+    flexing: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.21.02 (1).jpeg"),
+    sleepy2: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.21.02 (2).jpeg"),
+    sleepy3: encodeURIComponent("WhatsApp Image 2026-05-14 at 09.21.02.jpeg")
 };
 
 class AssetManager {
@@ -220,7 +217,7 @@ class AssetManager {
                     this.loaded++; onProgress(this.loaded / this.total, filename); resolve();
                 };
                 img.onerror = () => {
-                    // Fallback visual se a imagem não carregar na hospedagem web.
+                    // Fallback visual de emergência se a imagem não carregar.
                     const c = document.createElement('canvas'); c.width = 200; c.height = 200; const ctx = c.getContext('2d');
                     ctx.fillStyle = CONFIG.colors.red; ctx.fillRect(0,0,200,200);
                     ctx.fillStyle = 'white'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -228,8 +225,7 @@ class AssetManager {
                     this.assets[key] = { type: 'fallback', data: c, src: c.toDataURL() };
                     this.loaded++; onProgress(this.loaded / this.total, filename); resolve();
                 };
-                // Prepara a string para web substituindo espaços por %20 para evitar quebras em servidores Linux
-                img.src = encodeURI(filename); 
+                img.src = filename; // A string já está codificada pelo encodeURIComponent lá em cima
             });
         });
         await Promise.all(promises);
@@ -244,12 +240,37 @@ const Utils = {
     typewriter: (elementId, text, speed, callback) => {
         let i = 0; const target = document.getElementById(elementId); target.innerHTML = "";
         function type() {
-            if (i < text.length) { target.innerHTML = text.substring(0, i+1) + '<span class="cursor-blink">_</span>'; i++; setTimeout(type, speed); } 
-            else { target.innerHTML = text; if(callback) setTimeout(callback, 500); }
+            if (i < text.length) { 
+                target.innerHTML = text.substring(0, i+1).replace(/\n/g, '<br>') + '<span class="cursor-blink">_</span>'; 
+                i++; setTimeout(type, speed); 
+            } 
+            else { 
+                target.innerHTML = text.replace(/\n/g, '<br>'); 
+                if(callback) setTimeout(callback, 800); 
+            }
         }
         type();
     }
 };
+
+function initMatrix() {
+    const c = document.getElementById('matrix-bg'); const ctx = c.getContext('2d');
+    c.width = window.innerWidth; c.height = window.innerHeight;
+    const letters = "01</>{}[]".split(""); const fontSize = 16; const columns = c.width / fontSize;
+    const drops = []; for(let x = 0; x < columns; x++) drops[x] = 1;
+    function draw() {
+        ctx.fillStyle = "rgba(13, 13, 26, 0.05)"; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.fillStyle = CONFIG.colors.cyan; ctx.font = fontSize + "px monospace";
+        for(let i = 0; i < drops.length; i++) {
+            const text = letters[Math.floor(Math.random() * letters.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if(drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+        requestAnimationFrame(draw);
+    }
+    draw();
+}
 
 class Particle {
     constructor(x, y, color) {
@@ -266,31 +287,12 @@ class Particle {
     }
 }
 
-function initMatrix() {
-    const c = document.getElementById('matrix-bg'); const ctx = c.getContext('2d');
-    c.width = window.innerWidth; c.height = window.innerHeight;
-    const letters = "01".split(""); const fontSize = 16; const columns = c.width / fontSize;
-    const drops = []; for(let x = 0; x < columns; x++) drops[x] = 1;
-    function draw() {
-        ctx.fillStyle = "rgba(13, 13, 26, 0.05)"; ctx.fillRect(0, 0, c.width, c.height);
-        ctx.fillStyle = CONFIG.colors.cyan; ctx.font = fontSize + "px monospace";
-        for(let i = 0; i < drops.length; i++) {
-            const text = letters[Math.floor(Math.random() * letters.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if(drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
-            drops[i]++;
-        }
-        requestAnimationFrame(draw);
-    }
-    draw();
-}
-
 class DodgerGame {
     constructor() {
         this.c = document.getElementById('canvas-dodger'); this.ctx = this.c.getContext('2d');
         this.uiScore = document.getElementById('ui-dodger-score');
         this.active = false; this.jumpFn = this.jump.bind(this);
-        this.player = { x: 50, y: 0, w: 40, h: 60, vy: 0, gravity: 0.8, jumpPower: -14, grounded: false, frame: 0 };
+        this.player = { x: 50, y: 0, w: 40, h: 60, vy: 0, gravity: 0.8, jumpPower: -14, grounded: false };
         this.obs = []; this.particles = []; this.score = 0; this.speed = 6; this.frames = 0;
         window.addEventListener('resize', () => this.resize());
         document.addEventListener('keydown', (e) => { if((e.code==='Space'||e.code==='ArrowUp') && this.active) this.jump(); });
@@ -303,38 +305,68 @@ class DodgerGame {
         this.loop();
     }
     stop() { this.active = false; this.c.removeEventListener('mousedown', this.jumpFn); this.c.removeEventListener('touchstart', this.jumpFn); }
-    jump(e) { if(e) e.preventDefault(); if(this.player.grounded) { this.player.vy = this.player.jumpPower; this.player.grounded = false; for(let p=0; p<10; p++) this.particles.push(new Particle(this.player.x+20, this.player.y+60, '#fff')); } }
+    jump(e) { if(e) e.preventDefault(); if(this.player.grounded) { this.player.vy = this.player.jumpPower; this.player.grounded = false; for(let p=0; p<10; p++) this.particles.push(new Particle(this.player.x+20, this.player.y+60, CONFIG.colors.cyan)); } }
     
+    // Gráfico Melhorado: O Dev Hacker
     drawDev(x, y) {
         const ctx = this.ctx; ctx.save(); ctx.translate(x, y);
-        let bounce = this.player.grounded ? Math.sin(this.frames * 0.3) * 3 : 0;
-        ctx.fillStyle = '#333'; ctx.fillRect(0, 20 + bounce, 40, 30);
-        ctx.fillStyle = '#ffcc99'; ctx.fillRect(5, bounce, 30, 20);
-        ctx.fillStyle = '#111'; ctx.fillRect(5, bounce-5, 30, 10);
-        ctx.fillStyle = CONFIG.colors.cyan; ctx.fillRect(8, 5+bounce, 10, 5); ctx.fillRect(22, 5+bounce, 10, 5);
-        ctx.fillStyle = '#aaa'; ctx.fillRect(15, 30+bounce, 30, 5); ctx.fillStyle = '#0f0'; ctx.fillRect(40, 31+bounce, 2, 3);
-        ctx.fillStyle = '#111';
-        let leg1 = this.player.grounded ? Math.sin(this.frames * 0.5) * 10 : 0;
-        let leg2 = this.player.grounded ? Math.sin(this.frames * 0.5 + Math.PI) * 10 : 0;
-        ctx.fillRect(10 + leg1, 50, 8, 10); ctx.fillRect(22 + leg2, 50, 8, 10);
+        let bounce = this.player.grounded ? Math.sin(this.frames * 0.4) * 2 : 0;
+        
+        // Corpo / Moletom
+        ctx.fillStyle = '#2b2b2b'; ctx.beginPath(); ctx.roundRect(5, 20 + bounce, 30, 25, 5); ctx.fill();
+        // Mochila
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.roundRect(-5, 22 + bounce, 15, 20, 3); ctx.fill();
+        
+        // Cabeça (Monitor/Hacker)
+        ctx.fillStyle = '#111'; ctx.strokeStyle = CONFIG.colors.cyan; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(0, bounce, 40, 22, 4); ctx.fill(); ctx.stroke();
+        // Olhinhos (Terminal)
+        ctx.fillStyle = CONFIG.colors.cyan; ctx.font = "bold 12px monospace";
+        ctx.fillText(">_", 8, 15 + bounce);
+
+        // Pernas correndo
+        ctx.fillStyle = '#aaa';
+        let leg1 = this.player.grounded ? Math.sin(this.frames * 0.5) * 12 : -5;
+        let leg2 = this.player.grounded ? Math.sin(this.frames * 0.5 + Math.PI) * 12 : 5;
+        ctx.fillRect(10 + leg1, 45, 6, 15); ctx.fillRect(24 + leg2, 45, 6, 15);
         ctx.restore();
     }
 
+    // Gráfico Melhorado: O Bug Voador
     drawBug(o) {
         const ctx = this.ctx; ctx.save(); ctx.translate(o.x, o.y);
-        let flap = Math.sin(this.frames * 0.5) * 10;
-        ctx.fillStyle = CONFIG.colors.red; ctx.beginPath(); ctx.arc(15, 15, 15, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.beginPath(); ctx.ellipse(0, 15-flap, 15, 5, Math.PI/4, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(30, 15-flap, 15, 5, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+        let flap = Math.sin(this.frames * 0.8) * 12;
+        // Corpo do Bug
+        ctx.fillStyle = CONFIG.colors.red; 
+        ctx.beginPath(); ctx.ellipse(15, 15, 15, 10, 0, 0, Math.PI*2); ctx.fill();
+        // Patas
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(5, 20); ctx.lineTo(0, 25); ctx.moveTo(15, 25); ctx.lineTo(15, 30); ctx.moveTo(25, 20); ctx.lineTo(30, 25); ctx.stroke();
+        // Asas
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath(); ctx.ellipse(5, 10 - flap/2, 10, 15 - flap, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(25, 10 - flap/2, 10, 15 - flap, Math.PI/4, 0, Math.PI*2); ctx.fill();
         ctx.restore();
     }
 
+    // Gráfico Melhorado: O Servidor em Chamas
     drawServer(o) {
         const ctx = this.ctx; ctx.save(); ctx.translate(o.x, o.y);
-        ctx.fillStyle = '#222'; ctx.fillRect(0, 0, 40, 50);
-        ctx.fillStyle = (this.frames % 10 < 5) ? CONFIG.colors.red : '#500'; ctx.fillRect(5, 5, 8, 8); ctx.fillRect(20, 5, 8, 8);
-        ctx.fillStyle = '#ff8800'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(20, -20); ctx.lineTo(40, 0); ctx.fill();
+        // Rack de Servidor
+        ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.rect(0, 0, 35, 50); ctx.fill(); ctx.stroke();
+        // Slots e Luzes
+        for(let i=0; i<4; i++) {
+            ctx.fillStyle = '#111'; ctx.fillRect(5, 5 + (i*10), 25, 5);
+            ctx.fillStyle = (this.frames % 20 < 10 && i === 1) ? CONFIG.colors.red : '#0f0'; // Luz vermelha piscando
+            ctx.fillRect(25, 6 + (i*10), 3, 3);
+        }
+        // Fogo animado no topo
+        ctx.fillStyle = '#ff5500';
+        let f1 = Math.sin(this.frames * 0.5) * 5; let f2 = Math.cos(this.frames * 0.6) * 5;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(10, -15 + f1); ctx.lineTo(17, -5); ctx.lineTo(25, -20 + f2); ctx.lineTo(35, 0); ctx.fill();
+        ctx.fillStyle = '#ffaa00';
+        ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(12, -8 + f1); ctx.lineTo(17, -2); ctx.lineTo(22, -10 + f2); ctx.lineTo(30, 0); ctx.fill();
         ctx.restore();
     }
 
@@ -342,37 +374,41 @@ class DodgerGame {
         if(!this.active) return;
         this.frames++; this.ctx.clearRect(0,0,this.c.width, this.c.height);
         
-        this.ctx.fillStyle = '#111'; this.ctx.fillRect(0, this.floor, this.c.width, 30);
+        // Linha do chão
         this.ctx.strokeStyle = CONFIG.colors.cyan; this.ctx.lineWidth = 2;
         this.ctx.beginPath(); this.ctx.moveTo(0, this.floor); this.ctx.lineTo(this.c.width, this.floor); this.ctx.stroke();
 
         this.player.vy += this.player.gravity; this.player.y += this.player.vy;
         if(this.player.y + this.player.h >= this.floor) { this.player.y = this.floor - this.player.h; this.player.vy = 0; this.player.grounded = true; }
 
-        if(this.frames % Math.max(30, 100 - this.score*2) === 0) {
+        // Spawn de Obstáculos
+        if(this.frames % Math.max(40, 100 - this.score*2) === 0) {
             let isBug = Math.random() > 0.5;
             this.obs.push({
-                x: this.c.width, y: isBug ? this.floor - 70 : this.floor - 50,
-                w: isBug ? 30 : 40, h: isBug ? 30 : 50, type: isBug ? 'bug' : 'server'
+                x: this.c.width, y: isBug ? this.floor - 60 : this.floor - 50,
+                w: isBug ? 30 : 35, h: isBug ? 30 : 50, type: isBug ? 'bug' : 'server'
             });
         }
 
+        // Atualiza Obstáculos
         for(let i=this.obs.length-1; i>=0; i--) {
             let o = this.obs[i]; o.x -= this.speed;
             o.type === 'bug' ? this.drawBug(o) : this.drawServer(o);
 
+            // Detecção de Colisão
             if(this.player.x < o.x + o.w && this.player.x + this.player.w > o.x && this.player.y < o.y + o.h && this.player.y + this.player.h > o.y) {
-                this.stop(); for(let p=0; p<30; p++) this.particles.push(new Particle(this.player.x+20, this.player.y+30, CONFIG.colors.red));
+                this.stop(); for(let p=0; p<40; p++) this.particles.push(new Particle(this.player.x+20, this.player.y+30, CONFIG.colors.red));
                 this.particles.forEach(p => p.update(this.ctx)); 
-                setTimeout(() => App.handleGameEnd(false, "Sistema Crachou!", "Você foi engolido por bugs na produção."), 800);
+                setTimeout(() => App.handleGameEnd(false, "Sistema Crachou!", "Você foi engolido pelos bugs na produção."), 800);
                 return;
             }
             if(o.x + o.w < 0) {
                 this.obs.splice(i, 1); this.score++; this.uiScore.innerText = this.score;
-                if(this.score % 5 === 0) this.speed += 1;
-                if(this.score >= 15) { this.stop(); App.handleGameEnd(true, "Deploy Seguro!", "Código em produção sem erros."); return; }
+                if(this.score % 5 === 0) this.speed += 0.8; // Aumenta velocidade
+                if(this.score >= 15) { this.stop(); App.handleGameEnd(true, "Deploy Seguro!", "Código em produção sem erros. Bom trabalho!"); return; }
             }
         }
+        
         this.drawDev(this.player.x, this.player.y);
         for(let i=this.particles.length-1; i>=0; i--) { this.particles[i].update(this.ctx); if(this.particles[i].life<=0) this.particles.splice(i,1); }
         requestAnimationFrame(() => this.loop());
@@ -383,6 +419,7 @@ class MemoryGame {
     constructor() { this.board = document.getElementById('memory-board'); this.uiScore = document.getElementById('ui-memory-score'); this.active = false; }
     init() {
         this.active = true; this.board.innerHTML = ''; this.flipped = []; this.matches = 0; this.locked = false; this.uiScore.innerText = "0";
+        // Pega 8 imagens para formar 16 cartas
         let keys = Object.keys(rawImages).slice(0, 8);
         let deck = [...keys, ...keys].sort(() => Math.random() - 0.5);
 
@@ -412,7 +449,7 @@ class MemoryGame {
         const [c1, c2] = this.flipped;
         if(c1.dataset.key === c2.dataset.key) {
             c1.classList.add('matched'); c2.classList.add('matched'); this.matches++; this.uiScore.innerText = this.matches;
-            if(this.matches >= 8) { this.stop(); setTimeout(() => App.handleGameEnd(true, "Memória Expandida!", "Achou todas as fotos comprometedoras."), 500); }
+            if(this.matches >= 8) { this.stop(); setTimeout(() => App.handleGameEnd(true, "Memória Expandida!", "Achou todos os pares zoados."), 500); }
         } else {
             c1.classList.remove('flipped'); c2.classList.remove('flipped');
         }
@@ -454,6 +491,7 @@ class ClickerGame {
         if(!this.active) return;
         this.ctx.clearRect(0, 0, this.c.width, this.c.height);
 
+        // Spawn de bolinhas com imagens
         if(Math.random() < 0.04 && this.targets.length < 6) {
             let r = Utils.rand(35, 55);
             this.targets.push({
@@ -479,6 +517,7 @@ class ClickerGame {
                 this.ctx.drawImage(asset.data, t.x-t.r, t.y-t.r, t.r*2, t.r*2);
             } else {
                  this.ctx.fillStyle = '#333'; this.ctx.fillRect(t.x-t.r, t.y-t.r, t.r*2, t.r*2);
+                 this.ctx.fillStyle = '#fff'; this.ctx.font="12px sans-serif"; this.ctx.fillText("img", t.x-10, t.y);
             }
             this.ctx.restore();
         });
@@ -500,7 +539,6 @@ const App = {
 
         Assets.loadAll((p, name) => {
             document.getElementById('loader-bar').style.width = `${p * 100}%`;
-            document.getElementById('loader-text').innerText = `Carregando imagens...`;
         }).then(() => {
             setTimeout(() => this.switch('loading', 'menu'), 800);
         });
@@ -549,9 +587,11 @@ const App = {
         this.switch(this.current, 'menu'); this.current = null;
     },
 
+    // A MENSAGEM FINAL SIMPLIFICADA E TOCANTE
     runFinale() {
-        const text = "> Acessando root...\n> Bypass na segurança...\n\nA faculdade e o trabalho podem consumir nossa RAM...\nMas nenhum firewall bloqueia nossa conexão.\n\nMesmo afastados pela distância, ainda amo você, meu irmão.";
-        Utils.typewriter('final-message-area', text, 60, () => {
+        const text = "Mesmo afastados pela distância e responsabilidades,\nsempre vou te amar.\n\nFeliz aniversário!\nTe amo, irmão!!!";
+        
+        Utils.typewriter('final-message-area', text, 80, () => {
             setTimeout(() => {
                 const msgArea = document.getElementById('final-message-area');
                 msgArea.style.transition = "opacity 2s"; msgArea.style.opacity = "0";
@@ -560,7 +600,7 @@ const App = {
                     reveal.style.transition = "opacity 3s, transform 3s";
                     reveal.style.opacity = "1"; reveal.style.transform = "translate(-50%, -50%) scale(1.1)";
                 }, 2000);
-            }, 3500);
+            }, 3000);
         });
     }
 };
