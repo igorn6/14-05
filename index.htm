@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Undaias's gameshow</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --bg-color: #0d0d1a;
+            --text-color: #ffffff;
+            --accent-color: #00ffcc;
+            --secondary-color: #ff0055;
+            --font-main: 'Roboto', sans-serif;
+            --font-retro: 'Press Start 2P', cursive;
+            --font-code: 'Share Tech Mono', monospace;
+            --container-padding: 20px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+        body, html {
+            width: 100%; height: 100%; background-color: var(--bg-color);
+            color: var(--text-color); font-family: var(--font-main);
+            overflow: hidden; display: flex; justify-content: center; align-items: center;
+            perspective: 1000px;
+        }
+
+        #app-container {
+            width: 100%; height: 100%; position: relative; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #05050f 100%);
+            overflow: hidden;
+        }
+
+        #matrix-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; pointer-events: none;}
+
+        .layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: var(--container-padding); z-index: 10;
+            background: rgba(13, 13, 26, 0.85); backdrop-filter: blur(5px);
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease;
+        }
+
+        .hidden { opacity: 0; pointer-events: none; z-index: -1; transform: scale(1.05); }
+
+        h1, h2 { font-family: var(--font-retro); text-align: center; line-height: 1.4; }
+        h1 { font-size: 1.8rem; color: var(--accent-color); text-shadow: 2px 2px 0 #000, 0 0 10px var(--accent-color); margin-bottom: 20px; text-transform: uppercase; }
+        p { font-size: 1.1rem; line-height: 1.6; text-align: center; max-width: 600px; margin: 0 auto 20px auto; color: #ccc; }
+
+        .btn-retro {
+            background: rgba(0, 255, 204, 0.1); border: 2px solid var(--accent-color); color: var(--accent-color);
+            padding: 15px 30px; font-size: 1rem; font-family: var(--font-code); font-weight: bold;
+            text-transform: uppercase; cursor: pointer; transition: all 0.2s ease;
+            position: relative; overflow: hidden; margin: 10px; border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.3) inset; letter-spacing: 2px;
+        }
+        .btn-retro:hover { background: var(--accent-color); color: #000; box-shadow: 0 0 20px var(--accent-color); transform: translateY(-2px); }
+        .btn-retro:active { transform: translateY(2px); }
+
+        .loader-box { width: 80%; max-width: 400px; padding: 20px; border: 1px solid #333; background: rgba(0,0,0,0.5); text-align: left; font-family: var(--font-code); }
+        .loader-bar-bg { width: 100%; height: 20px; background: #111; margin-top: 10px; border: 1px solid var(--accent-color); }
+        #loader-bar { height: 100%; width: 0%; background: var(--accent-color); transition: width 0.1s; }
+
+        .game-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 900px; margin-top: 30px; }
+        .game-card {
+            background: rgba(20, 20, 35, 0.8); border: 2px solid #333; padding: 25px;
+            text-align: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 12px; width: 260px; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .game-card:hover { border-color: var(--accent-color); transform: translateY(-10px); box-shadow: 0 10px 20px rgba(0,255,204,0.1); background: rgba(30,30,50,0.9); }
+        .game-card.completed { border-color: #00ff00; opacity: 0.7; }
+        .game-icon { font-size: 3.5rem; margin-bottom: 15px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+        .game-card h3 { font-family: var(--font-code); color: #fff; margin-bottom: 10px; font-size: 1.3rem;}
+
+        .game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg-color); z-index: 20; }
+        .game-header {
+            height: 60px; display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; background: #05050f; border-bottom: 2px solid var(--accent-color); font-family: var(--font-code); font-size: 1.2rem;
+        }
+        .game-canvas-area { flex-grow: 1; position: relative; width: 100%; height: calc(100% - 60px); overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        #game-memory .game-canvas-area { display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #2a2a3e 0%, #0d0d1a 100%); }
+        #memory-board {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            width: 95%; max-width: 600px; aspect-ratio: 1; padding: 10px;
+        }
+        .memory-card { perspective: 1000px; cursor: pointer; position: relative; width: 100%; height: 100%; }
+        .memory-inner { width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); transform-style: preserve-3d; position: relative; }
+        .memory-card.flipped .memory-inner { transform: rotateY(180deg); }
+        .front, .back { width: 100%; height: 100%; position: absolute; backface-visibility: hidden; display: flex; justify-content: center; align-items: center; border-radius: 8px; border: 2px solid #444; overflow: hidden; }
+        .front {
+            background: #111; color: var(--accent-color); font-size: 2.5rem; font-family: var(--font-retro);
+            background-image: repeating-linear-gradient(45deg, #111 25%, transparent 25%, transparent 75%, #111 75%, #111), repeating-linear-gradient(45deg, #111 25%, #1a1a2e 25%, #1a1a2e 75%, #111 75%, #111);
+            background-position: 0 0, 10px 10px; background-size: 20px 20px;
+        }
+        .back { background: #fff; transform: rotateY(180deg); background-size: cover; background-position: center; border-color: var(--accent-color); }
+        .memory-card.matched .back { border-color: #00ff00; box-shadow: 0 0 20px #00ff00; filter: grayscale(0.2); }
+
+        #final-sequence-container { background: #000; z-index: 100; justify-content: center; align-items: center; }
+        #final-message-area { font-family: var(--font-code); font-size: 1.5rem; color: #0f0; text-align: left; max-width: 800px; padding: 40px; min-height: 150px; text-shadow: 0 0 5px #0f0; line-height: 1.5; }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        #ultimate-reveal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; opacity: 0; pointer-events: none; }
+        #ultimate-message { font-family: var(--font-retro); font-size: 2.5rem; color: var(--accent-color); text-transform: uppercase; text-align: center; text-shadow: 0 0 20px var(--accent-color); margin-bottom: 15px; white-space: nowrap; line-height: 1.5; }
+        #save-date { font-family: var(--font-main); font-size: 1.2rem; color: #fff; letter-spacing: 3px; font-weight: bold; background: rgba(255,0,85,0.8); padding: 5px 15px; border-radius: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <canvas id="matrix-bg"></canvas>
+
+    <div id="screen-loading" class="layer">
+        <div class="loader-box">
+            <div style="margin-bottom: 10px;">> INICIALIZANDO SISTEMA UNDAIAS...</div>
+            <div id="loader-text" style="color: #888; font-size: 0.9rem;">Carregando pacotes npm e fotos comprometedoras...</div>
+            <div class="loader-bar-bg"><div id="loader-bar"></div></div>
+        </div>
+    </div>
+
+    <div id="screen-menu" class="layer hidden">
+        <h1>The Undaias's<br>gameshow</h1>
+        <p>Feliz Aniversário, irmão! Complete as missões de Dev para desbloquear a surpresa final.</p>
+        <div class="game-grid">
+            <div class="game-card" id="card-dodger" onclick="App.startGame('dodger')">
+                <div class="game-icon">🏃‍♂️💻</div>
+                <h3>Corrida do Dev</h3>
+                <p style="font-size: 0.9rem; color: #aaa;">Fuja dos bugs e dos servidores em chamas!</p>
+            </div>
+            <div class="game-card" id="card-memory" onclick="App.startGame('memory')">
+                <div class="game-icon">🧠📸</div>
+                <h3>Memória RAM</h3>
+                <p style="font-size: 0.9rem; color: #aaa;">Ache os pares das nossas fotos zoadas (16 cartas).</p>
+            </div>
+            <div class="game-card" id="card-clicker" onclick="App.startGame('clicker')">
+                <div class="game-icon">🖱️⚡</div>
+                <h3>Ping Test</h3>
+                <p style="font-size: 0.9rem; color: #aaa;">Teste seu reflexo clicando nas fotos voadoras!</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-dodger" class="game-container hidden">
+        <div class="game-header">
+            <div>Bugs Evitados: <span id="ui-dodger-score" style="color:var(--accent-color)">0</span> / 15</div>
+            <button class="btn-retro" style="padding: 5px 15px; margin: 0; font-size: 0.8rem;" onclick="App.returnToMenu()">Sair</button>
+        </div>
+        <div class="game-canvas-area"><canvas id="canvas-dodger"></canvas></div>
+    </div>
+
+    <div id="screen-memory" class="game-container hidden">
+         <div class="game-header">
+            <div>Pares: <span id="ui-memory-score" style="color:var(--accent-color)">0</span> / 8</div>
+             <button class="btn-retro" style="padding: 5px 15px; margin: 0; font-size: 0.8rem;" onclick="App.returnToMenu()">Sair</button>
+        </div>
+        <div class="game-canvas-area">
+            <div id="memory-board"></div>
+        </div>
+    </div>
+
+    <div id="screen-clicker" class="game-container hidden">
+        <div class="game-header">
+            <div>Tickets Fechados: <span id="ui-clicker-score" style="color:var(--accent-color)">0</span> / 20</div>
+            <button class="btn-retro" style="padding: 5px 15px; margin: 0; font-size: 0.8rem;" onclick="App.returnToMenu()">Sair</button>
+        </div>
+        <div class="game-canvas-area"><canvas id="canvas-clicker"></canvas></div>
+    </div>
+
+    <div id="screen-modal" class="layer hidden" style="background: rgba(0,0,0,0.95); z-index: 50;">
+        <h1 id="modal-title" style="font-size: 2.5rem;">Resultado</h1>
+        <p id="modal-desc" style="font-size: 1.2rem; margin-bottom: 30px;">Texto</p>
+        <button class="btn-retro" onclick="App.closeModal()">Continuar</button>
+    </div>
+
+    <div id="screen-final" class="layer hidden">
+        <div id="final-message-area"></div>
+        <div id="ultimate-reveal">
+            <div id="ultimate-message">Tô chegando<br>papai.</div>
+            <div id="save-date">(Save the date: 16/05/26)</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const CONFIG = {
+    gamesToWin: 3,
+    colors: { gold: '#FFD700', cyan: '#00ffcc', red: '#ff0055', bg: '#0d0d1a' }
+};
+
+// Aqui estão os nomes exatos do seu Windows Explorer.
+// Para a Web, é ALTAMENTE RECOMENDADO renomear as fotos para nomes simples sem espaços.
+// Ex: foto1.jpeg, foto2.jpeg. Mas este código usa os originais.
+const rawImages = {
+    stadiumSelfie: "WhatsApp Image 2026-05-14 at 09.19.46.jpeg",
+    closeSelfie: "WhatsApp Image 2026-05-14 at 09.19.46 (1).jpeg",
+    backpackThumb: "WhatsApp Image 2026-05-14 at 09.19.46 (2).jpeg",
+    shirtlessSmile: "WhatsApp Image 2026-05-14 at 09.19.47.jpeg",
+    bathroomThumbsUp: "WhatsApp Image 2026-05-14 at 09.19.47 (1).jpeg",
+    selfieMirror: "WhatsApp Image 2026-05-14 at 09.19.47 (2).jpeg",
+    sleepy1: "WhatsApp Image 2026-05-14 at 09.21.01.jpeg",
+    flexing: "WhatsApp Image 2026-05-14 at 09.21.02 (1).jpeg",
+    sleepy2: "WhatsApp Image 2026-05-14 at 09.21.02 (2).jpeg",
+    sleepy3: "WhatsApp Image 2026-05-14 at 09.21.02.jpeg"
+};
+
+class AssetManager {
+    constructor() { this.assets = {}; this.total = Object.keys(rawImages).length; this.loaded = 0; }
+    
+    async loadAll(onProgress) {
+        const promises = Object.entries(rawImages).map(([key, filename]) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    this.assets[key] = { type: 'img', data: img, src: img.src };
+                    this.loaded++; onProgress(this.loaded / this.total, filename); resolve();
+                };
+                img.onerror = () => {
+                    // Fallback visual se a imagem não carregar na hospedagem web.
+                    const c = document.createElement('canvas'); c.width = 200; c.height = 200; const ctx = c.getContext('2d');
+                    ctx.fillStyle = CONFIG.colors.red; ctx.fillRect(0,0,200,200);
+                    ctx.fillStyle = 'white'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(key.substring(0,4), 100, 100);
+                    this.assets[key] = { type: 'fallback', data: c, src: c.toDataURL() };
+                    this.loaded++; onProgress(this.loaded / this.total, filename); resolve();
+                };
+                // Prepara a string para web substituindo espaços por %20 para evitar quebras em servidores Linux
+                img.src = encodeURI(filename); 
+            });
+        });
+        await Promise.all(promises);
+    }
+    get(key) { return this.assets[key]; }
+}
+const Assets = new AssetManager();
+
+const Utils = {
+    rand: (min, max) => Math.random() * (max - min) + min,
+    randInt: (min, max) => Math.floor(Math.random() * (max - min + 1) + min),
+    typewriter: (elementId, text, speed, callback) => {
+        let i = 0; const target = document.getElementById(elementId); target.innerHTML = "";
+        function type() {
+            if (i < text.length) { target.innerHTML = text.substring(0, i+1) + '<span class="cursor-blink">_</span>'; i++; setTimeout(type, speed); } 
+            else { target.innerHTML = text; if(callback) setTimeout(callback, 500); }
+        }
+        type();
+    }
+};
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.vx = Utils.rand(-5, 5); this.vy = Utils.rand(-5, 5);
+        this.life = 1.0; this.decay = Utils.rand(0.02, 0.05); this.size = Utils.rand(2, 6);
+    }
+    update(ctx) {
+        this.x += this.vx; this.y += this.vy; this.life -= this.decay;
+        if(this.life > 0) {
+            ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.size, this.size); ctx.globalAlpha = 1.0;
+        }
+    }
+}
+
+function initMatrix() {
+    const c = document.getElementById('matrix-bg'); const ctx = c.getContext('2d');
+    c.width = window.innerWidth; c.height = window.innerHeight;
+    const letters = "01".split(""); const fontSize = 16; const columns = c.width / fontSize;
+    const drops = []; for(let x = 0; x < columns; x++) drops[x] = 1;
+    function draw() {
+        ctx.fillStyle = "rgba(13, 13, 26, 0.05)"; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.fillStyle = CONFIG.colors.cyan; ctx.font = fontSize + "px monospace";
+        for(let i = 0; i < drops.length; i++) {
+            const text = letters[Math.floor(Math.random() * letters.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if(drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+        requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+class DodgerGame {
+    constructor() {
+        this.c = document.getElementById('canvas-dodger'); this.ctx = this.c.getContext('2d');
+        this.uiScore = document.getElementById('ui-dodger-score');
+        this.active = false; this.jumpFn = this.jump.bind(this);
+        this.player = { x: 50, y: 0, w: 40, h: 60, vy: 0, gravity: 0.8, jumpPower: -14, grounded: false, frame: 0 };
+        this.obs = []; this.particles = []; this.score = 0; this.speed = 6; this.frames = 0;
+        window.addEventListener('resize', () => this.resize());
+        document.addEventListener('keydown', (e) => { if((e.code==='Space'||e.code==='ArrowUp') && this.active) this.jump(); });
+    }
+    resize() { if(this.c.parentElement) { this.c.width = this.c.parentElement.clientWidth; this.c.height = this.c.parentElement.clientHeight; this.floor = this.c.height - 30; } }
+    init() {
+        this.resize(); this.active = true; this.score = 0; this.speed = 6; this.obs = []; this.particles = []; this.frames = 0;
+        this.uiScore.innerText = "0"; this.player.y = this.floor - this.player.h; this.player.vy = 0;
+        this.c.addEventListener('mousedown', this.jumpFn); this.c.addEventListener('touchstart', this.jumpFn, {passive: false});
+        this.loop();
+    }
+    stop() { this.active = false; this.c.removeEventListener('mousedown', this.jumpFn); this.c.removeEventListener('touchstart', this.jumpFn); }
+    jump(e) { if(e) e.preventDefault(); if(this.player.grounded) { this.player.vy = this.player.jumpPower; this.player.grounded = false; for(let p=0; p<10; p++) this.particles.push(new Particle(this.player.x+20, this.player.y+60, '#fff')); } }
+    
+    drawDev(x, y) {
+        const ctx = this.ctx; ctx.save(); ctx.translate(x, y);
+        let bounce = this.player.grounded ? Math.sin(this.frames * 0.3) * 3 : 0;
+        ctx.fillStyle = '#333'; ctx.fillRect(0, 20 + bounce, 40, 30);
+        ctx.fillStyle = '#ffcc99'; ctx.fillRect(5, bounce, 30, 20);
+        ctx.fillStyle = '#111'; ctx.fillRect(5, bounce-5, 30, 10);
+        ctx.fillStyle = CONFIG.colors.cyan; ctx.fillRect(8, 5+bounce, 10, 5); ctx.fillRect(22, 5+bounce, 10, 5);
+        ctx.fillStyle = '#aaa'; ctx.fillRect(15, 30+bounce, 30, 5); ctx.fillStyle = '#0f0'; ctx.fillRect(40, 31+bounce, 2, 3);
+        ctx.fillStyle = '#111';
+        let leg1 = this.player.grounded ? Math.sin(this.frames * 0.5) * 10 : 0;
+        let leg2 = this.player.grounded ? Math.sin(this.frames * 0.5 + Math.PI) * 10 : 0;
+        ctx.fillRect(10 + leg1, 50, 8, 10); ctx.fillRect(22 + leg2, 50, 8, 10);
+        ctx.restore();
+    }
+
+    drawBug(o) {
+        const ctx = this.ctx; ctx.save(); ctx.translate(o.x, o.y);
+        let flap = Math.sin(this.frames * 0.5) * 10;
+        ctx.fillStyle = CONFIG.colors.red; ctx.beginPath(); ctx.arc(15, 15, 15, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath(); ctx.ellipse(0, 15-flap, 15, 5, Math.PI/4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(30, 15-flap, 15, 5, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    drawServer(o) {
+        const ctx = this.ctx; ctx.save(); ctx.translate(o.x, o.y);
+        ctx.fillStyle = '#222'; ctx.fillRect(0, 0, 40, 50);
+        ctx.fillStyle = (this.frames % 10 < 5) ? CONFIG.colors.red : '#500'; ctx.fillRect(5, 5, 8, 8); ctx.fillRect(20, 5, 8, 8);
+        ctx.fillStyle = '#ff8800'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(20, -20); ctx.lineTo(40, 0); ctx.fill();
+        ctx.restore();
+    }
+
+    loop() {
+        if(!this.active) return;
+        this.frames++; this.ctx.clearRect(0,0,this.c.width, this.c.height);
+        
+        this.ctx.fillStyle = '#111'; this.ctx.fillRect(0, this.floor, this.c.width, 30);
+        this.ctx.strokeStyle = CONFIG.colors.cyan; this.ctx.lineWidth = 2;
+        this.ctx.beginPath(); this.ctx.moveTo(0, this.floor); this.ctx.lineTo(this.c.width, this.floor); this.ctx.stroke();
+
+        this.player.vy += this.player.gravity; this.player.y += this.player.vy;
+        if(this.player.y + this.player.h >= this.floor) { this.player.y = this.floor - this.player.h; this.player.vy = 0; this.player.grounded = true; }
+
+        if(this.frames % Math.max(30, 100 - this.score*2) === 0) {
+            let isBug = Math.random() > 0.5;
+            this.obs.push({
+                x: this.c.width, y: isBug ? this.floor - 70 : this.floor - 50,
+                w: isBug ? 30 : 40, h: isBug ? 30 : 50, type: isBug ? 'bug' : 'server'
+            });
+        }
+
+        for(let i=this.obs.length-1; i>=0; i--) {
+            let o = this.obs[i]; o.x -= this.speed;
+            o.type === 'bug' ? this.drawBug(o) : this.drawServer(o);
+
+            if(this.player.x < o.x + o.w && this.player.x + this.player.w > o.x && this.player.y < o.y + o.h && this.player.y + this.player.h > o.y) {
+                this.stop(); for(let p=0; p<30; p++) this.particles.push(new Particle(this.player.x+20, this.player.y+30, CONFIG.colors.red));
+                this.particles.forEach(p => p.update(this.ctx)); 
+                setTimeout(() => App.handleGameEnd(false, "Sistema Crachou!", "Você foi engolido por bugs na produção."), 800);
+                return;
+            }
+            if(o.x + o.w < 0) {
+                this.obs.splice(i, 1); this.score++; this.uiScore.innerText = this.score;
+                if(this.score % 5 === 0) this.speed += 1;
+                if(this.score >= 15) { this.stop(); App.handleGameEnd(true, "Deploy Seguro!", "Código em produção sem erros."); return; }
+            }
+        }
+        this.drawDev(this.player.x, this.player.y);
+        for(let i=this.particles.length-1; i>=0; i--) { this.particles[i].update(this.ctx); if(this.particles[i].life<=0) this.particles.splice(i,1); }
+        requestAnimationFrame(() => this.loop());
+    }
+}
+
+class MemoryGame {
+    constructor() { this.board = document.getElementById('memory-board'); this.uiScore = document.getElementById('ui-memory-score'); this.active = false; }
+    init() {
+        this.active = true; this.board.innerHTML = ''; this.flipped = []; this.matches = 0; this.locked = false; this.uiScore.innerText = "0";
+        let keys = Object.keys(rawImages).slice(0, 8);
+        let deck = [...keys, ...keys].sort(() => Math.random() - 0.5);
+
+        deck.forEach(key => {
+            const card = document.createElement('div'); card.className = 'memory-card'; card.dataset.key = key;
+            const inner = document.createElement('div'); inner.className = 'memory-inner';
+            const front = document.createElement('div'); front.className = 'front'; front.innerText = '?';
+            const back = document.createElement('div'); back.className = 'back';
+            
+            let asset = Assets.get(key);
+            back.style.backgroundImage = `url("${asset.src}")`;
+
+            inner.appendChild(front); inner.appendChild(back); card.appendChild(inner);
+            card.onclick = () => this.flip(card); this.board.appendChild(card);
+        });
+    }
+    stop() { this.active = false; }
+    flip(card) {
+        if(!this.active || this.locked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+        card.classList.add('flipped'); this.flipped.push(card);
+        if(this.flipped.length === 2) {
+            this.locked = true;
+            setTimeout(() => this.check(), 800);
+        }
+    }
+    check() {
+        const [c1, c2] = this.flipped;
+        if(c1.dataset.key === c2.dataset.key) {
+            c1.classList.add('matched'); c2.classList.add('matched'); this.matches++; this.uiScore.innerText = this.matches;
+            if(this.matches >= 8) { this.stop(); setTimeout(() => App.handleGameEnd(true, "Memória Expandida!", "Achou todas as fotos comprometedoras."), 500); }
+        } else {
+            c1.classList.remove('flipped'); c2.classList.remove('flipped');
+        }
+        this.flipped = []; this.locked = false;
+    }
+}
+
+class ClickerGame {
+    constructor() {
+        this.c = document.getElementById('canvas-clicker'); this.ctx = this.c.getContext('2d');
+        this.uiScore = document.getElementById('ui-clicker-score'); this.active = false; this.targets = []; this.score = 0;
+        this.clickFn = this.onClick.bind(this); this.allKeys = Object.keys(rawImages);
+        window.addEventListener('resize', () => this.resize());
+    }
+    resize() { if(this.c.parentElement) { this.c.width = this.c.parentElement.clientWidth; this.c.height = this.c.parentElement.clientHeight; } }
+    init() {
+        this.resize(); this.active = true; this.score = 0; this.targets = []; this.uiScore.innerText = "0";
+        this.c.addEventListener('mousedown', this.clickFn); this.c.addEventListener('touchstart', this.clickFn, {passive: false});
+        this.loop();
+    }
+    stop() { this.active = false; this.c.removeEventListener('mousedown', this.clickFn); this.c.removeEventListener('touchstart', this.clickFn); }
+    
+    onClick(e) {
+        if(!this.active) return; e.preventDefault();
+        const rect = this.c.getBoundingClientRect();
+        let cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        let cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+        for(let i=this.targets.length-1; i>=0; i--) {
+            let t = this.targets[i];
+            if(Math.hypot(cx - t.x, cy - t.y) <= t.r) {
+                this.targets.splice(i, 1); this.score++; this.uiScore.innerText = this.score;
+                if(this.score >= 20) { this.stop(); App.handleGameEnd(true, "Ping Baixo!", "Reflexos em dia, fechou os tickets rápido."); return; }
+                break;
+            }
+        }
+    }
+    loop() {
+        if(!this.active) return;
+        this.ctx.clearRect(0, 0, this.c.width, this.c.height);
+
+        if(Math.random() < 0.04 && this.targets.length < 6) {
+            let r = Utils.rand(35, 55);
+            this.targets.push({
+                x: Utils.rand(r, this.c.width-r), y: Utils.rand(r, this.c.height-r),
+                vx: Utils.rand(-5, 5), vy: Utils.rand(-5, 5), r: r,
+                key: this.allKeys[Math.floor(Math.random()*this.allKeys.length)]
+            });
+        }
+
+        this.targets.forEach(t => {
+            t.x += t.vx; t.y += t.vy;
+            if(t.x - t.r < 0 || t.x + t.r > this.c.width) t.vx *= -1;
+            if(t.y - t.r < 0 || t.y + t.r > this.c.height) t.vy *= -1;
+
+            this.ctx.save();
+            this.ctx.beginPath(); this.ctx.arc(t.x, t.y, t.r, 0, Math.PI*2); this.ctx.closePath();
+            
+            this.ctx.lineWidth = 4; this.ctx.strokeStyle = CONFIG.colors.cyan; this.ctx.stroke();
+            this.ctx.clip();
+            
+            let asset = Assets.get(t.key);
+            if(asset.type === 'img') {
+                this.ctx.drawImage(asset.data, t.x-t.r, t.y-t.r, t.r*2, t.r*2);
+            } else {
+                 this.ctx.fillStyle = '#333'; this.ctx.fillRect(t.x-t.r, t.y-t.r, t.r*2, t.r*2);
+            }
+            this.ctx.restore();
+        });
+        requestAnimationFrame(() => this.loop());
+    }
+}
+
+const App = {
+    screens: {}, games: {}, current: null, state: { won: new Set() },
+    
+    init() {
+        initMatrix();
+        this.screens = {
+            loading: document.getElementById('screen-loading'), menu: document.getElementById('screen-menu'),
+            dodger: document.getElementById('screen-dodger'), memory: document.getElementById('screen-memory'), clicker: document.getElementById('screen-clicker'),
+            modal: document.getElementById('screen-modal'), final: document.getElementById('screen-final')
+        };
+        this.games = { dodger: new DodgerGame(), memory: new MemoryGame(), clicker: new ClickerGame() };
+
+        Assets.loadAll((p, name) => {
+            document.getElementById('loader-bar').style.width = `${p * 100}%`;
+            document.getElementById('loader-text').innerText = `Carregando imagens...`;
+        }).then(() => {
+            setTimeout(() => this.switch('loading', 'menu'), 800);
+        });
+    },
+
+    switch(from, to) {
+        if(from && this.screens[from]) this.screens[from].classList.add('hidden');
+        if(to && this.screens[to]) {
+            this.screens[to].classList.remove('hidden');
+            if(to !== 'menu' && to !== 'modal' && to !== 'final' && to !== 'loading') {
+                setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
+            }
+        }
+    },
+
+    startGame(id) {
+        if(this.state.won.has(id)) return;
+        this.current = id; this.switch('menu', id);
+        setTimeout(() => this.games[id].init(), 300);
+    },
+
+    handleGameEnd(success, title, desc) {
+        if(this.current) this.games[this.current].stop();
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-title').style.color = success ? CONFIG.colors.cyan : CONFIG.colors.red;
+        document.getElementById('modal-desc').innerText = desc;
+        if(success && this.current) {
+            this.state.won.add(this.current);
+            document.getElementById(`card-${this.current}`).classList.add('completed');
+        }
+        this.switch(this.current, 'modal');
+    },
+
+    closeModal() {
+        if(this.state.won.size >= CONFIG.gamesToWin) {
+            this.switch('modal', 'final');
+            setTimeout(() => this.runFinale(), 1000);
+        } else {
+            this.switch('modal', 'menu');
+        }
+        this.current = null;
+    },
+
+    returnToMenu() {
+        if(this.current) this.games[this.current].stop();
+        this.switch(this.current, 'menu'); this.current = null;
+    },
+
+    runFinale() {
+        const text = "> Acessando root...\n> Bypass na segurança...\n\nA faculdade e o trabalho podem consumir nossa RAM...\nMas nenhum firewall bloqueia nossa conexão.\n\nMesmo afastados pela distância, ainda amo você, meu irmão.";
+        Utils.typewriter('final-message-area', text, 60, () => {
+            setTimeout(() => {
+                const msgArea = document.getElementById('final-message-area');
+                msgArea.style.transition = "opacity 2s"; msgArea.style.opacity = "0";
+                setTimeout(() => {
+                    const reveal = document.getElementById('ultimate-reveal');
+                    reveal.style.transition = "opacity 3s, transform 3s";
+                    reveal.style.opacity = "1"; reveal.style.transform = "translate(-50%, -50%) scale(1.1)";
+                }, 2000);
+            }, 3500);
+        });
+    }
+};
+
+window.onload = () => App.init();
+</script>
+</body>
+</html>
